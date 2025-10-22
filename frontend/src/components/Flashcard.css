@@ -1,0 +1,198 @@
+.flashcard {
+  width: 100%;
+  max-width: 800px;
+  height: 500px;
+  perspective: 1000px;
+  cursor: pointer;
+}
+
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s;
+  transform-style: preserve-3d;
+}
+
+.flashcard-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.flashcard-front,
+.flashcard-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--card-shadow);
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.flashcard-front:hover,
+.flashcard-back:hover {
+  box-shadow: 0 8px 24px var(--card-shadow-hover);
+  border-color: var(--border-hover);
+}
+
+.flashcard-front {
+  color: var(--text-primary);
+}
+
+.flashcard-back {
+  color: var(--text-primary);
+  transform: rotateY(180deg);
+}
+
+.card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1.5rem;
+  opacity: 0.6;
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 1rem 0;
+}
+
+.card-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.card-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-content::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 2px;
+}
+
+.card-content p {
+  font-size: 1.25rem;
+  line-height: 1.6;
+  text-align: center;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+/* LaTeX rendering styles */
+.latex-content {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  text-align: center;
+  width: 100%;
+  color: var(--text-primary);
+}
+
+.latex-inline {
+  display: inline;
+  margin: 0 0.2em;
+}
+
+.latex-block {
+  display: block;
+  margin: 1em 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.latex-error {
+  color: var(--error-color);
+  background: var(--bg-secondary);
+  padding: 0.2em 0.5em;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.flip-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  opacity: 0.5;
+  color: var(--text-tertiary);
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+/* Card Difficulty Selector */
+.card-difficulty-selector {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.card-difficulty-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.card-difficulty-btn:hover {
+  transform: scale(1.1);
+  border-color: var(--border-hover);
+  background: var(--bg-tertiary);
+}
+
+.card-difficulty-btn.easy.active {
+  background: #4ade80;
+  border-color: #4ade80;
+  transform: scale(1.15);
+}
+
+.card-difficulty-btn.medium.active {
+  background: #fbbf24;
+  border-color: #fbbf24;
+  transform: scale(1.15);
+}
+
+.card-difficulty-btn.hard.active {
+  background: #ef4444;
+  border-color: #ef4444;
+  transform: scale(1.15);
+}
+
+@media (max-width: 768px) {
+  .flashcard {
+    height: 450px;
+  }
+  
+  .flashcard-front,
+  .flashcard-back {
+    padding: 1.5rem;
+  }
+  
+  .card-content p,
+  .latex-content {
+    font-size: 1.1rem;
+  }
+  
+  .card-difficulty-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+}

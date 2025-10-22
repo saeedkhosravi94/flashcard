@@ -9,7 +9,7 @@ services:
     volumes:
       - mongodb_data:/data/db
     networks:
-      - n8n-network
+      - shared-network
     healthcheck:
       test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/flashcard --quiet
       interval: 10s
@@ -43,7 +43,7 @@ services:
       mongodb:
         condition: service_healthy
     networks:
-      - n8n-network
+      - shared-network
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:5000/api/health"]
       interval: 30s
@@ -66,13 +66,13 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - n8n-network
+      - shared-network
 
 volumes:
   mongodb_data:
     driver: local
 
 networks:
-  n8n-network:
-    driver: bridge
+  shared-network:
+    external: true
 

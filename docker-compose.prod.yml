@@ -61,10 +61,7 @@ services:
     container_name: flashcard-frontend-prod
     restart: always
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - "8080:80"
     depends_on:
       backend:
         condition: service_healthy

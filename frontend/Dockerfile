@@ -27,12 +27,11 @@ FROM nginx:alpine
 # Copy built files from builder stage
 COPY --from=builder /app/build /usr/share/nginx/html
 
-# Copy custom nginx configuration for production
-COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
+# Copy nginx configuration (HTTP only, SSL handled by system Nginx)
+COPY nginx.docker.conf /etc/nginx/conf.d/default.conf
 
-# Expose ports
+# Expose port 80 (HTTP only)
 EXPOSE 80
-EXPOSE 443
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

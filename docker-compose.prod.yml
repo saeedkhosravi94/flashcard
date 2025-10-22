@@ -74,5 +74,5 @@ volumes:
 
 networks:
   n8n-network:
-    external: true
+    driver: bridge
 

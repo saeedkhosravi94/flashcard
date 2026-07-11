@@ -573,8 +573,13 @@ router.post('/upload', (req, res, next) => {
       } catch (aiError) {
         console.error('AI generation error:', aiError);
         await fs.unlink(req.file.path);
-        return res.status(500).json({ 
-          error: `Failed to generate flashcards: ${aiError.message}. Please try again or upload a different file.` 
+
+        if (aiService.isApiKeyIssue(aiError.message)) {
+          return res.status(503).json({ error: aiError.message });
+        }
+
+        return res.status(500).json({
+          error: `Failed to generate flashcards: ${aiError.message}. Please try again or upload a different file.`
         });
       }
       

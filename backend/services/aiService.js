@@ -125,6 +125,7 @@ class AIService {
   async processChunks(chunks, progressCallback = null, aiConfig = {}) {
     const allFlashcards = [];
     const contentChunker = require('./contentChunker');
+    let apiKeyIssueDetected = false;
     
     console.log(`📚 Processing ${chunks.length} chunks with configuration:`, {
       model: aiConfig.model || 'gemini-2.5-flash',
@@ -213,10 +214,14 @@ class AIService {
         
       } catch (error) {
         console.error(`❌ Error processing chunk ${i + 1} ("${chunk.title}"):`, error.message);
-        
+
+        if (this.isApiKeyIssue(error.message)) {
+          apiKeyIssueDetected = true;
+        }
+
         // Continue with next chunk instead of failing completely
         console.log(`⏭️  Skipping chunk ${i + 1}, continuing with remaining chunks...`);
-        
+
         if (progressCallback) {
           progressCallback({
             currentChunk: i + 1,
@@ -230,8 +235,20 @@ class AIService {
     }
     
     console.log(`🎉 Total flashcards generated: ${allFlashcards.length} from ${chunks.length} chunks`);
-    
+
+    if (allFlashcards.length === 0 && apiKeyIssueDetected) {
+      throw new Error('Gemini is no longer free to use. Please add your own Gemini API key to generate flashcards.');
+    }
+
     return allFlashcards;
+  }
+
+  /**
+   * Detect whether an AI provider error is caused by an invalid, leaked,
+   * or rate/quota-limited API key rather than the input content itself.
+   */
+  isApiKeyIssue(errorMessage = '') {
+    return /api key|leaked|forbidden|403|401|unauthorized|quota|rate.?limit|RESOURCE_EXHAUSTED|billing/i.test(errorMessage);
   }
 
   /**

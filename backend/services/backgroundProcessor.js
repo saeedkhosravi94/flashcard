@@ -62,7 +62,7 @@ class BackgroundProcessor {
       let flashcards = await aiService.processChunks(chunks, progressCallback, aiConfig);
 
       if (!flashcards || flashcards.length === 0) {
-        throw new Error('No flashcards were generated from the content');
+        throw new Error('No flashcards were generated from the content. The file might not contain educational material suitable for flashcards.');
       }
 
       console.log(`✅ Generated ${flashcards.length} flashcards from ${chunks.length} sections`);

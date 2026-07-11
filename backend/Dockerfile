@@ -25,9 +25,6 @@ COPY package*.json ./
 
 RUN npm install
 
-# Install production dependencies only (faster, cleaner)
-RUN npm ci --only=production
-
 # Copy the rest of the app
 COPY . .
 

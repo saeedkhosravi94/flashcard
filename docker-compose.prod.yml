@@ -31,10 +31,13 @@ services:
       - NODE_OPTIONS=--max-old-space-size=8192
       - JWT_SECRET=${JWT_SECRET}
       - SESSION_SECRET=${SESSION_SECRET}
+      - FRONTEND_URL=https://activerecaller.com
+      - BACKEND_URL=https://activerecaller.com
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
-      - GOOGLE_CALLBACK_URL=https://flash.saeedkhosravi.it/api/auth/google/callback
-      - FRONTEND_URL=https://flash.saeedkhosravi.it
+      - GOOGLE_CALLBACK_URL=https://activerecaller.com/api/auth/google/callback
+      - GOOGLE_RECAPTCHA_SITE_KEY=${GOOGLE_RECAPTCHA_SITE_KEY}
+      - GOOGLE_RECAPTCHA_SECRET_KEY=${GOOGLE_RECAPTCHA_SECRET_KEY}
     ports:
       - "5000:5000"
     volumes:
@@ -57,7 +60,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - REACT_APP_BACKEND_URL=https://flash.saeedkhosravi.it
+        - REACT_APP_BACKEND_URL=https://activerecaller.com
     container_name: flashcard-frontend-prod
     restart: always
     ports:

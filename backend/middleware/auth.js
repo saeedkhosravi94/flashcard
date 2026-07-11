@@ -37,18 +37,29 @@ const optionalAuth = async (req, res, next) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
+    console.log('🔐 OptionalAuth - Path:', req.path, 'Has token:', !!token);
+    
     if (token) {
+      console.log('🔐 Token present, verifying...');
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-this');
+      console.log('🔐 Token decoded, userId:', decoded.userId);
+      
       const user = await User.findById(decoded.userId);
       
       if (user) {
         req.user = user;
         req.userId = user._id;
+        console.log('✅ User authenticated:', user.email, 'ID:', user._id);
+      } else {
+        console.log('❌ User not found for decoded userId:', decoded.userId);
       }
+    } else {
+      console.log('ℹ️ No token provided, continuing as guest');
     }
     
     next();
   } catch (error) {
+    console.error('⚠️ OptionalAuth error:', error.message);
     // Continue without authentication
     next();
   }

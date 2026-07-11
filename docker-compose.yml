@@ -36,6 +36,10 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - FRONTEND_URL=http://localhost:3000
+      - BACKEND_URL=http://localhost:5000
+      - GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+      - GOOGLE_RECAPTCHA_SITE_KEY=${GOOGLE_RECAPTCHA_SITE_KEY:-6LfccAgsAAAAADwDI1gYxAoFI7xo5OAMDdxaEvGV}
+      - GOOGLE_RECAPTCHA_SECRET_KEY=${GOOGLE_RECAPTCHA_SECRET_KEY:-6LfccAgsAAAAAKLpN-_60IG2m2nZ203Zfz9z9fuT}
     ports:
       - "5000:5000"
     volumes:

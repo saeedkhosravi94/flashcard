@@ -5,12 +5,459 @@
   padding: 0;
 }
 
+/* Empty state for unauthenticated users */
+.dashboard-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-deck-illustration {
+  width: 300px;
+  height: 300px;
+  max-width: 100%;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+  animation: fadeInScale 0.6s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+}
+
+.dashboard-empty-state h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1rem 0;
+}
+
+.empty-state-description {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 500px;
+  line-height: 1.6;
+}
+
+.create-deck-page {
+  max-width: 100%;
+}
+
+.create-deck-page-header {
+  margin-bottom: 1rem;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: var(--primary-color);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+
+.back-button:hover {
+  background: var(--primary-hover);
+  transform: translateX(-4px);
+}
+
 .dashboard-content {
   background: var(--card-bg);
   border-radius: 12px;
   padding: 2.5rem;
-  border: 1px solid var(--border-color);
+  border: 2px solid var(--border-color);
   box-shadow: 0 4px 12px var(--card-shadow);
+}
+
+/* Review Today Section */
+.review-today-section {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 20px var(--card-shadow);
+  border: 2px solid var(--border-color);
+  animation: slideIn 0.4s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.review-today-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--accent-color), var(--accent-hover));
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.review-today-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.review-today-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-icon {
+  font-size: 32px;
+  color: var(--accent-color);
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.review-today-title h3 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.review-today-badge {
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+  padding: 10px 20px;
+  border-radius: 25px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.review-today-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.review-decks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.review-deck-row {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 16px 20px;
+  border: 2px solid var(--border-color);
+  box-shadow: 0 2px 8px var(--card-shadow);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.review-deck-row::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent-color);
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.review-deck-row:hover {
+  transform: translateX(4px);
+  box-shadow: 0 4px 16px var(--card-shadow-hover);
+  border-color: var(--accent-color);
+}
+
+.review-deck-row:hover::before {
+  transform: scaleY(1);
+}
+
+.review-deck-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.review-deck-info {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.review-deck-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 6px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.2px;
+}
+
+.review-deck-stats {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 14px;
+}
+
+.due-count {
+  color: var(--accent-text);
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+  padding: 6px 14px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+}
+
+.total-count {
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 13px;
+}
+
+/* Review Mode Buttons */
+.review-mode-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.review-mode-btn {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 60px;
+  position: relative;
+}
+
+/* Ensure borders are visible in light mode */
+[data-theme="light"] .review-mode-btn {
+  border-color: #b0b0b0;
+  border-width: 2px;
+}
+
+[data-theme="dark"] .review-mode-btn {
+  border-color: var(--border-color);
+}
+
+.review-mode-btn:hover {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.review-mode-btn:hover .mode-icon,
+.review-mode-btn:hover .mode-label {
+  color: var(--accent-text);
+}
+
+.review-mode-btn .mode-icon {
+  font-size: 18px;
+  transition: transform 0.2s ease;
+  color: var(--text-secondary);
+  display: block;
+}
+
+.review-mode-btn:hover .mode-icon {
+  transform: scale(1.1);
+}
+
+.review-mode-btn .mode-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.review-mode-btn.quick:hover {
+  background: #ff9800;
+  border-color: #ff9800;
+}
+
+.review-mode-btn.standard:hover {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.review-mode-btn.focus:hover {
+  background: #9c27b0;
+  border-color: #9c27b0;
+}
+
+.review-mode-btn.nightly:hover {
+  background: #3f51b5;
+  border-color: #3f51b5;
+}
+
+.review-more-info {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  padding-top: 16px;
+  border-top: 2px solid var(--border-color);
+  margin-top: 8px;
+}
+
+/* Mobile responsive for review section */
+@media (max-width: 768px) {
+  .review-today-section {
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+
+  .review-today-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .review-today-badge {
+    align-self: flex-start;
+  }
+
+  .review-deck-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .review-deck-main {
+    width: 100%;
+  }
+
+  .review-mode-buttons {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .review-mode-btn {
+    flex: 1;
+    min-width: 60px;
+    padding: 6px 8px;
+  }
+
+  .review-mode-btn .mode-icon {
+    font-size: 16px;
+  }
+
+  .review-mode-btn .mode-label {
+    font-size: 10px;
+  }
+}
+
+/* Extra small mobile devices (< 600px) */
+@media (max-width: 600px) {
+  .review-today-section {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .review-decks-list {
+    gap: 10px;
+  }
+
+  .review-deck-row {
+    padding: 12px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .review-deck-title {
+    font-size: 14px;
+  }
+
+  .review-deck-stats {
+    flex-wrap: wrap;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .due-count {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+
+  .total-count {
+    font-size: 12px;
+  }
+
+  .review-mode-buttons {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .review-mode-btn {
+    flex: 1;
+    min-width: 50px;
+    padding: 6px 6px;
+  }
+
+  .review-mode-btn .mode-icon {
+    font-size: 14px;
+  }
+
+  .review-mode-btn .mode-label {
+    font-size: 9px;
+  }
 }
 
 .upload-icon {
@@ -108,19 +555,62 @@
   text-align: center;
 }
 
-.spinner {
-  border: 3px solid var(--border-color);
-  border-radius: 50%;
-  border-top: 3px solid var(--accent-color);
-  width: 50px;
-  height: 50px;
-  animation: spin 1s linear infinite;
+/* Book Loading Animation */
+.book-loader {
+  width: 200px;
+  height: 140px;
+  background: #979794;
+  box-sizing: border-box;
+  position: relative;
+  border-radius: 8px;
+  perspective: 1000px;
   margin: 0 auto 1rem;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+.book-loader:before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  bottom: 10px;
+  border-radius: 8px;
+  background: #f5f5f5 no-repeat;
+  background-size: 60px 10px;
+  background-image: linear-gradient(#ddd 100px, transparent 0),
+                    linear-gradient(#ddd 100px, transparent 0), 
+                    linear-gradient(#ddd 100px, transparent 0), 
+                    linear-gradient(#ddd 100px, transparent 0), 
+                    linear-gradient(#ddd 100px, transparent 0), 
+                    linear-gradient(#ddd 100px, transparent 0);
+  background-position: 15px 30px, 15px 60px, 15px 90px, 
+                       105px 30px, 105px 60px, 105px 90px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.25);
+}
+
+.book-loader:after {
+  content: '';
+  position: absolute;
+  width: calc(50% - 10px);
+  right: 10px;
+  top: 10px;
+  bottom: 10px;
+  border-radius: 8px;
+  background: #fff no-repeat;
+  background-size: 60px 10px;
+  background-image: linear-gradient(#ddd 100px, transparent 0), 
+                    linear-gradient(#ddd 100px, transparent 0), 
+                    linear-gradient(#ddd 100px, transparent 0);
+  background-position: 50% 30px, 50% 60px, 50% 90px;
+  transform: rotateY(0deg);
+  transform-origin: left center;
+  animation: paging 1s linear infinite;
+}
+
+@keyframes paging {
+  to {
+    transform: rotateY(-180deg);
+  }
 }
 
 .loading p {

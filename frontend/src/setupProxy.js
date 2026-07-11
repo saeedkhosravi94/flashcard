@@ -7,8 +7,6 @@ module.exports = function(app) {
   const target = process.env.REACT_APP_BACKEND_URL || 
                  (isDocker ? 'http://backend:5000' : 'http://localhost:5000');
   
-  console.log('Proxy configuration:', target);
-  
   app.use(
     '/api',
     createProxyMiddleware({
@@ -26,6 +24,16 @@ module.exports = function(app) {
           target: target
         }));
       },
+    })
+  );
+
+  // Proxy for uploaded files
+  app.use(
+    '/uploads',
+    createProxyMiddleware({
+      target: target,
+      changeOrigin: true,
+      logLevel: 'debug',
     })
   );
 };

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { applyTheme } from './themes';
 
 const ThemeContext = createContext();
 
@@ -16,17 +17,32 @@ export const ThemeProvider = ({ children }) => {
     return saved ? saved === 'dark' : true; // Default to dark theme
   });
 
+  const [currentThemeId, setCurrentThemeId] = useState(() => {
+    const saved = localStorage.getItem('selectedTheme');
+    return saved || 'ocean-black';
+  });
+
   useEffect(() => {
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
+    localStorage.setItem('selectedTheme', currentThemeId);
+    applyTheme(currentThemeId, isDark ? 'dark' : 'light');
+  }, [isDark, currentThemeId]);
 
   const toggleTheme = () => {
     setIsDark(prev => !prev);
   };
 
+  const setTheme = (themeId) => {
+    setCurrentThemeId(themeId);
+  };
+
   return (
-    <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+    <ThemeContext.Provider value={{ 
+      isDark, 
+      toggleTheme, 
+      currentThemeId, 
+      setTheme 
+    }}>
       {children}
     </ThemeContext.Provider>
   );

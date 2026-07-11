@@ -15,7 +15,7 @@ RUN npm install
 COPY . .
 
 # Build argument for backend URL
-ARG REACT_APP_BACKEND_URL=https://flash.saeedkhosravi.it
+ARG REACT_APP_BACKEND_URL=https://activerecaller.com
 ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
 
 # Build the application

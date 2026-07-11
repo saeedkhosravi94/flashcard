@@ -1,11 +1,32 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { FaCopy, FaCheckCircle, FaCog } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
 import './UserMenu.css';
 
-function UserMenu() {
+function UserMenu({ onOpenSettings }) {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [userId, setUserId] = useState('');
+  const [copied, setCopied] = useState(false);
   const menuRef = useRef(null);
+
+  // Fetch user ID when menu opens
+  useEffect(() => {
+    if (isOpen && user && !userId) {
+      fetchUserId();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user]);
+
+  const fetchUserId = async () => {
+    try {
+      const response = await axios.get('/api/flashcards/share/my-id');
+      setUserId(response.data.userId);
+    } catch (err) {
+      console.error('Error fetching user ID:', err);
+    }
+  };
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -22,6 +43,14 @@ function UserMenu() {
   const handleLogout = async () => {
     await logout();
     setIsOpen(false);
+  };
+
+  const copyUserId = () => {
+    if (userId) {
+      navigator.clipboard.writeText(userId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const getInitials = (name) => {
@@ -61,6 +90,43 @@ function UserMenu() {
               <div className="user-email">{user.email}</div>
             </div>
           </div>
+
+          {userId && (
+            <>
+              <div className="user-menu-divider"></div>
+              <div className="user-id-section">
+                <div className="user-id-label">Your User ID:</div>
+                <div className="user-id-display">
+                  <code className="user-id-code">{userId}</code>
+                  <button 
+                    className="copy-user-id-btn" 
+                    onClick={copyUserId}
+                    title="Copy User ID"
+                  >
+                    {copied ? <FaCheckCircle /> : <FaCopy />}
+                  </button>
+                </div>
+                {copied && (
+                  <div className="copied-message">Copied!</div>
+                )}
+              </div>
+            </>
+          )}
+          
+          <div className="user-menu-divider"></div>
+          
+          {onOpenSettings && (
+            <button 
+              className="user-menu-item"
+              onClick={() => {
+                onOpenSettings();
+                setIsOpen(false);
+              }}
+            >
+              <FaCog />
+              Settings
+            </button>
+          )}
           
           <div className="user-menu-divider"></div>
           

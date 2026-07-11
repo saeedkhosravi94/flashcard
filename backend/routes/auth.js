@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const passport = require('../config/passport');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { auth } = require('../middleware/auth');
-const passport = require('../config/passport');
+const { logActivity } = require('../utils/activityLogger');
+const { verifyRecaptcha } = require('../utils/recaptcha');
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -19,7 +21,7 @@ const generateToken = (userId) => {
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, recaptchaToken } = req.body;
 
     // Validation
     if (!email || !password || !name) {
@@ -28,6 +30,14 @@ router.post('/register', async (req, res) => {
 
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Verify reCAPTCHA
+    if (recaptchaToken) {
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken);
+      if (!recaptchaResult.success) {
+        return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
+      }
     }
 
     // Check if user already exists
@@ -44,6 +54,9 @@ router.post('/register', async (req, res) => {
     });
 
     await user.save();
+
+    // Log registration activity
+    await logActivity(user._id, 'register', { email: user.email }, req);
 
     // Generate token
     const token = generateToken(user._id);
@@ -69,24 +82,25 @@ router.post('/register', async (req, res) => {
 // @access  Public
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, recaptchaToken } = req.body;
 
     // Validation
     if (!email || !password) {
       return res.status(400).json({ error: 'Please provide email and password' });
     }
 
+    // Verify reCAPTCHA
+    if (recaptchaToken) {
+      const recaptchaResult = await verifyRecaptcha(recaptchaToken);
+      if (!recaptchaResult.success) {
+        return res.status(400).json({ error: 'reCAPTCHA verification failed. Please try again.' });
+      }
+    }
+
     // Find user
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Check if user registered with Google
-    if (user.googleId && !user.password) {
-      return res.status(400).json({ 
-        error: 'This account was created with Google. Please sign in with Google.' 
-      });
     }
 
     // Verify password
@@ -98,6 +112,9 @@ router.post('/login', async (req, res) => {
     // Update last login
     user.lastLogin = new Date();
     await user.save();
+
+    // Log login activity
+    await logActivity(user._id, 'login', { email: user.email }, req);
 
     // Generate token
     const token = generateToken(user._id);
@@ -140,44 +157,65 @@ router.get('/me', auth, async (req, res) => {
 // @route   POST /api/auth/logout
 // @desc    Logout user
 // @access  Private
-router.post('/logout', auth, (req, res) => {
-  // With JWT, logout is handled on the client side by removing the token
-  // We'll just send a success message
-  res.json({ message: 'Logout successful' });
+router.post('/logout', auth, async (req, res) => {
+  try {
+    // Log logout activity
+    await logActivity(req.user._id, 'logout', { email: req.user.email }, req);
+    
+    // With JWT, logout is handled on the client side by removing the token
+    res.json({ message: 'Logout successful' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.json({ message: 'Logout successful' }); // Still return success even if logging fails
+  }
 });
 
 // @route   GET /api/auth/google
-// @desc    Authenticate with Google
+// @desc    Initiate Google OAuth login
 // @access  Public
-router.get(
-  '/google',
-  passport.authenticate('google', {
-    scope: ['profile', 'email']
-  })
-);
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 // @route   GET /api/auth/google/callback
 // @desc    Google OAuth callback
 // @access  Public
-router.get(
-  '/google/callback',
-  passport.authenticate('google', { 
-    session: false,
-    failureRedirect: '/login?error=google_auth_failed' 
-  }),
-  (req, res) => {
+router.get('/google/callback',
+  passport.authenticate('google', { session: false, failureRedirect: 'https://activerecaller.com/?error=auth_failed' }),
+  async (req, res) => {
     try {
-      // Generate JWT token
-      const token = generateToken(req.user._id);
+      const user = req.user;
       
+      if (!user) {
+        console.error('❌ Google OAuth callback: No user object in request');
+        const frontendUrl = 'https://activerecaller.com';
+        return res.redirect(`${frontendUrl}/?error=auth_failed&reason=no_user`);
+      }
+
+      console.log('✅ Google OAuth callback: User authenticated:', user.email, 'ID:', user._id);
+      
+      // Log login activity
+      await logActivity(user._id, 'login', { email: user.email, method: 'google' }, req);
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { userId: user._id },
+        process.env.JWT_SECRET || 'your-secret-key-change-this',
+        { expiresIn: '30d' }
+      );
+
+      console.log('✅ JWT token generated for user:', user._id);
+      console.log('🔗 Redirecting to frontend with token');
+
       // Redirect to frontend with token
-      // In development, redirect to localhost:3000
-      // In production, redirect to your production URL
-      const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3000';
-      res.redirect(`${frontendURL}/auth/callback?token=${token}`);
+      const frontendUrl = 'https://activerecaller.com';
+      const redirectUrl = `${frontendUrl}/auth/callback?token=${token}`;
+      console.log('📍 Redirect URL:', redirectUrl.substring(0, 100) + '...');
+      
+      res.redirect(redirectUrl);
     } catch (error) {
-      console.error('Google callback error:', error);
-      res.redirect('/login?error=google_auth_failed');
+      console.error('❌ Google OAuth callback error:', error);
+      console.error('Error stack:', error.stack);
+      const frontendUrl = 'https://activerecaller.com';
+      res.redirect(`${frontendUrl}/?error=auth_failed&reason=server_error`);
     }
   }
 );

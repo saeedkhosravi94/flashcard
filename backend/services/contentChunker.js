@@ -7,10 +7,10 @@ class ContentChunker {
   constructor() {
     // Configuration for chunking
     this.config = {
-      minChunkSize: 2000,        // Minimum characters per chunk
-      maxChunkSize: 15000,       // Maximum characters per chunk (safe for AI processing)
-      targetChunkSize: 8000,     // Target characters per chunk for optimal processing
-      overlapSize: 500,          // Overlap between chunks to maintain context
+      minChunkSize: 5000,        // Minimum characters per chunk
+      maxChunkSize: 40000,       // Maximum characters per chunk (modern AI can handle larger contexts)
+      targetChunkSize: 25000,    // Target characters per chunk for optimal processing
+      overlapSize: 1000,         // Overlap between chunks to maintain context
     };
   }
 
@@ -21,6 +21,20 @@ class ContentChunker {
    * @returns {Array} Array of chunk objects with text and metadata
    */
   chunkContent(text, numPages = null) {
+    // Validate input is a string
+    if (typeof text !== 'string') {
+      console.error('❌ ContentChunker ERROR: text parameter is not a string!');
+      console.error('  Type:', typeof text);
+      console.error('  Value:', text);
+      console.error('  Constructor:', text?.constructor?.name);
+      if (typeof text === 'object' && text !== null) {
+        console.error('  Keys:', Object.keys(text));
+        console.error('  Has .text property?:', !!text.text);
+        console.error('  text.text type:', typeof text.text);
+      }
+      throw new Error(`ContentChunker expects string input, got ${typeof text}. Check if you're passing the parsed object instead of .text property.`);
+    }
+    
     console.log(`Starting intelligent chunking for ${text.length} characters, ${numPages || 'unknown'} pages`);
     
     // For very small documents, return as single chunk
@@ -219,9 +233,21 @@ class ContentChunker {
         title: title
       });
       
-      // Add overlap for context continuity
-      start = end - this.config.overlapSize;
-      if (start < 0) start = 0;
+      // Move to next chunk with overlap for context continuity
+      const nextStart = end - this.config.overlapSize;
+      
+      // Prevent infinite loop: ensure we always make progress
+      if (nextStart <= start) {
+        start = end; // Jump to end without overlap
+      } else {
+        start = nextStart;
+      }
+      
+      // Safety break
+      if (start >= text.length || partIndex > 100) {
+        break;
+      }
+      
       partIndex++;
     }
     
@@ -258,11 +284,25 @@ class ContentChunker {
         title: `Chunk ${chunkIndex}`
       });
       
-      start = end - this.config.overlapSize;
-      if (start < 0) start = 0;
+      // Move to next chunk - ensure we always progress forward
+      const nextStart = end - this.config.overlapSize;
+      
+      // Prevent infinite loop: if we're not making progress, jump forward
+      if (nextStart <= start) {
+        start = start + Math.max(1000, this.config.minChunkSize);
+      } else {
+        start = nextStart;
+      }
+      
+      // If we're at the end, break to prevent infinite loop
+      if (start >= text.length) {
+        break;
+      }
+      
       chunkIndex++;
     }
     
+    console.log(`Document split into ${chunks.length} intelligent chunks`);
     return chunks;
   }
 

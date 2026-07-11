@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { updateLastActivity } from '../utils/inactivityTracker';
 
 function AuthCallback() {
   const navigate = useNavigate();
@@ -12,20 +13,59 @@ function AuthCallback() {
       const token = params.get('token');
 
       if (token) {
-        // Save token to localStorage
+        // Save token to localStorage FIRST - this is critical
         localStorage.setItem('token', token);
         
-        // Set axios default header
+        // Force a synchronous write to ensure token is saved
+        // Some browsers may delay localStorage writes
+        if (localStorage.getItem('token') !== token) {
+          // Retry if not saved
+          localStorage.setItem('token', token);
+        }
+        
+        // Set axios default header immediately - BEFORE any requests
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-        // Trigger auth change event
-        window.dispatchEvent(new Event('auth-change'));
-
-        // Redirect to home page
-        window.location.href = '/';
+        // Verify token is valid
+        try {
+          const response = await axios.get('/api/auth/me');
+          if (response.data && response.data.user) {
+            // Token is valid - ensure it's saved and reload
+            // Double-check token is in localStorage before reload
+            localStorage.setItem('token', token);
+            
+            // Initialize inactivity tracking on successful OAuth login
+            updateLastActivity();
+            
+            // Small delay to ensure localStorage is flushed
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Verify token is still there before reload
+            if (localStorage.getItem('token') === token) {
+              // Use window.location.replace to avoid adding to history
+              window.location.replace('/');
+            } else {
+              // If token was lost, save it again and reload
+              localStorage.setItem('token', token);
+              window.location.replace('/');
+            }
+          } else {
+            throw new Error('Invalid token response');
+          }
+        } catch (error) {
+          console.error('Error verifying token:', error);
+          localStorage.removeItem('token');
+          delete axios.defaults.headers.common['Authorization'];
+          navigate('/?error=auth_failed', { replace: true });
+        }
       } else {
-        // If no token, redirect to home with error
-        navigate('/?error=auth_failed');
+        // Check for error in URL
+        const error = params.get('error');
+        if (error) {
+          navigate(`/?error=${error}`, { replace: true });
+        } else {
+          navigate('/?error=auth_failed', { replace: true });
+        }
       }
     };
 

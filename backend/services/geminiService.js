@@ -1,90 +1,140 @@
+/**
+ * Google Gemini AI Service
+ * Handles flashcard generation using Google's Gemini models
+ */
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-// Professional prompt for high-quality flashcard generation
-const DEFAULT_PROMPT = `You are a professional educational content designer specializing in creating effective learning flashcards using evidence-based pedagogical principles.
-
-TASK: Analyze the provided content and generate a comprehensive set of high-quality flashcards that facilitate active recall and spaced repetition learning.
-
-FLASHCARD CREATION GUIDELINES:
-
-1. QUESTION DESIGN:
-   - Create clear, specific, and unambiguous questions
-   - Use active voice and direct language
-   - Focus on one concept per flashcard
-   - Vary question types: definitions, explanations, applications, comparisons, and examples
-   - Include "What", "How", "Why", "When", and "Explain" questions for depth
-
-2. ANSWER QUALITY:
-   - Provide accurate, complete, and well-structured answers
-   - Include relevant context when necessary
-   - Keep answers concise but comprehensive (2-4 sentences ideal)
-   - Use clear explanations that reinforce understanding
-   - Add examples or mnemonics where helpful
-
-3. CONTENT COVERAGE:
-   - Extract all key concepts, principles, and definitions
-   - Include important facts, dates, names, and terminology
-   - Cover cause-and-effect relationships
-   - Identify critical distinctions and comparisons
-   - Capture practical applications and examples
-
-4. COGNITIVE LEVELS:
-   - Include questions at multiple levels: recall, understanding, and application
-   - Balance simple memorization with deeper comprehension
-   - Create questions that test connections between concepts
-
-5. LATEX FORMATTING (IMPORTANT):
-   - For mathematical expressions, formulas, and equations, ALWAYS use LaTeX notation
-   - Use $...$ for inline math: $E = mc^2$
-   - Use $$...$$ for display math (block equations): $$\\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$
-   - For chemical formulas, use LaTeX: $H_2O$, $CO_2$
-   - For scientific notation: $6.022 \\times 10^{23}$
-   - Escape backslashes properly in JSON: use \\\\ instead of \\
-   - Common LaTeX commands: \\frac{}{}, \\sqrt{}, \\sum, \\int, \\alpha, \\beta, etc.
-
-OUTPUT FORMAT:
-Return ONLY a valid JSON array with NO additional text, explanations, or markdown.
-Structure each flashcard exactly as shown:
-
-[
-  {
-    "question": "What is the quadratic formula?",
-    "answer": "The quadratic formula is $$x = \\frac{-b \\pm \\sqrt{b^2-4ac}}{2a}$$ where $a$, $b$, and $c$ are coefficients of the quadratic equation $ax^2 + bx + c = 0$."
-  },
-  {
-    "question": "What is Einstein's mass-energy equivalence?",
-    "answer": "$E = mc^2$ states that energy ($E$) equals mass ($m$) times the speed of light squared ($c^2$). This shows mass and energy are interchangeable."
-  }
-]
-
-REQUIREMENTS:
-- Generate {CARD_COUNT} flashcards from this content
-- Ensure valid JSON syntax (proper quotes, commas, brackets)
-- Maintain consistent quality across all flashcards
-- Prioritize the most important and testable information
-- Cover all major topics in this section
-- Use LaTeX for ALL mathematical, scientific, and chemical notation
-
-Remember: These flashcards will be used for serious study and learning. Make them professional, accurate, and pedagogically sound. Mathematical content MUST be in LaTeX format for proper rendering.`;
+const { buildPrompt } = require('./prompts');
 
 class GeminiService {
   constructor() {
-    // Using Gemini 2.5 Flash - Latest and most advanced Flash model
     this.genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-    this.model = this.genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-flash'
+    this.defaultModel = 'gemini-2.5-flash';
+  }
+
+  /**
+   * Get a fresh model instance to prevent context bleeding
+   * @param {string} modelName - The Gemini model to use
+   * @param {string} apiKey - Optional API key (uses default if not provided)
+   * @returns {Object} Gemini model instance
+   */
+  getFreshModel(modelName = 'gemini-2.5-flash', apiKey = null) {
+    const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : this.genAI;
+    
+    return genAI.getGenerativeModel({ 
+      model: modelName,
+      generationConfig: {
+        temperature: 0.3,  // Lower temperature for more focused, accurate responses
+        topK: 40,
+        topP: 0.95,
+      },
+      safetySettings: [
+        {
+          category: 'HARM_CATEGORY_HATE_SPEECH',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+        {
+          category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
+          threshold: 'BLOCK_MEDIUM_AND_ABOVE',
+        },
+      ],
     });
   }
 
   /**
-   * Generate flashcards from a single piece of content
+   * Generate flashcards using Gemini API
+   * @param {string} content - The text content to convert to flashcards
+   * @param {number} cardCount - Number of flashcards to generate
+   * @param {string} customPrompt - Optional custom prompt
+   * @param {string} modelName - Gemini model to use
+   * @param {string} apiKey - Optional API key
+   * @returns {Promise<Array>} Array of flashcard objects
    */
-  async generateFlashcards(content, cardCount = 25) {
+  async generateFlashcards(content, cardCount = 25, customPrompt = null, modelName = 'gemini-2.5-flash', apiKey = null) {
     try {
-      const prompt = DEFAULT_PROMPT.replace('{CARD_COUNT}', cardCount) + 
-                    `\n\nContent to analyze:\n${content}`;
+      // Validate content is a string BEFORE using it in prompt
+      if (typeof content !== 'string') {
+        console.error('❌ GEMINI ERROR: content parameter is not a string!');
+        console.error('  Type:', typeof content);
+        console.error('  Value:', content);
+        console.error('  Constructor:', content?.constructor?.name);
+        if (typeof content === 'object' && content !== null) {
+          console.error('  Object keys:', Object.keys(content));
+          console.error('  Has .text property?:', !!content.text);
+          // Try to extract text property if available
+          if (content.text && typeof content.text === 'string') {
+            console.log('  ✅ Found .text property, using that instead');
+            content = content.text;
+          } else {
+            throw new Error(`Content must be a string, got ${typeof content}. Object keys: ${Object.keys(content).join(', ')}`);
+          }
+        } else {
+          throw new Error(`Content must be a string, got ${typeof content}`);
+        }
+      }
       
-      const result = await this.model.generateContent(prompt);
+      if (!content || content.trim().length === 0) {
+        throw new Error('Content is empty');
+      }
+      
+      console.log(`📄 Content preview (first 100 chars): "${content.substring(0, 100)}..."`);
+      
+      // 🔍 DEBUG LOG 6: In geminiService before creating prompt
+      console.log('🔍 DEBUG LOG 6 - In geminiService.generateFlashcards (after validation, before prompt creation):');
+      console.log('  - content type:', typeof content);
+      console.log('  - content is string?:', typeof content === 'string');
+      console.log('  - content length:', content.length);
+      console.log('  - content first 200 chars:', content.substring(0, 200));
+      console.log('  - cardCount:', cardCount);
+      console.log('  - modelName:', modelName);
+      console.log('  - customPrompt provided?:', !!customPrompt);
+      
+      // Determine if we have actual content or just generating from instructions
+      const hasContent = content && content.trim().length > 20 && 
+                        !content.includes('Generate flashcards based on the user instructions');
+      
+      // Build prompt: user instruction + fixed format + fixed morality
+      const basePrompt = buildPrompt(customPrompt, cardCount, hasContent);
+      
+      let prompt;
+      if (hasContent) {
+        // Check if this is context-based generation (has existing cards) or content extraction
+        const isContextGeneration = content.includes('EXISTING CARD QUESTIONS') || 
+                                   content.includes('EXISTING CARDS IN THIS DECK') || 
+                                   content.includes('Existing Card') ||
+                                   (content.includes('TASK: Generate') && content.includes('existing cards'));
+        
+        if (isContextGeneration) {
+          // Context-based generation mode (using existing cards as reference)
+          prompt = basePrompt + 
+                  `\n\n${content}\n\nGenerate the new flashcard based on the context and instructions above. Return a JSON array with one flashcard object.`;
+        } else {
+          // Content extraction mode
+          prompt = basePrompt + 
+                  `\n\n=== BEGIN CONTENT ===\n${content}\n=== END CONTENT ===\n\nGenerate ${cardCount} flashcards ONLY from the content above. Return a JSON array.`;
+        }
+      } else {
+        // Generation from instructions mode
+        prompt = basePrompt + 
+                `\n\nGenerate ${cardCount} flashcards based on the instructions provided above. Create original, educational content following the specified format. Return a JSON array.`;
+      }
+      
+      // 🔍 DEBUG LOG 7: Check the actual prompt being sent
+      console.log('🔍 DEBUG LOG 7 - Prompt created, showing content section:');
+      const contentSectionMatch = prompt.match(/=== BEGIN CONTENT ===([\s\S]*?)=== END CONTENT ===/);
+      if (contentSectionMatch) {
+        const extractedContent = contentSectionMatch[1].trim();
+        console.log('  - Extracted content from prompt (first 300 chars):', extractedContent.substring(0, 300));
+        console.log('  - Extracted content type:', typeof extractedContent);
+        console.log('  - Extracted content length:', extractedContent.length);
+        console.log('  - Does it contain "[object Object]"?:', extractedContent.includes('[object Object]'));
+      }
+      
+      console.log(`🔵 Gemini: Generating ${cardCount} flashcards with model ${modelName}`);
+      
+      // Get fresh model and generate content
+      const model = this.getFreshModel(modelName, apiKey);
+      const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
       
@@ -96,125 +146,88 @@ class GeminiService {
         jsonText = jsonText.replace(/```\n?/g, '').replace(/```\n?$/g, '');
       }
       
-      const flashcards = JSON.parse(jsonText);
+      let flashcards = JSON.parse(jsonText);
       
       if (!Array.isArray(flashcards)) {
-        throw new Error('Invalid response format from Gemini');
+        throw new Error('Invalid response format from Gemini - expected array');
       }
       
+      // Normalize field names to ensure 'question' and 'answer' exist
+      flashcards = flashcards.map((card, index) => {
+        // Handle different possible field names
+        let question = card.question || card.Question || card.q || card.Q || card.front || card.Front || '';
+        let answer = card.answer || card.Answer || card.a || card.A || card.back || card.Back || '';
+        
+        // Validate that question and answer are strings, not objects
+        if (typeof question !== 'string') {
+          console.error(`❌ Card ${index + 1} has non-string question:`, {
+            type: typeof question,
+            value: question
+          });
+          // Try to extract text if it's an object with a text property
+          if (question && typeof question === 'object' && question.text) {
+            question = question.text;
+          } else {
+            question = JSON.stringify(question);
+          }
+        }
+        
+        if (typeof answer !== 'string') {
+          console.error(`❌ Card ${index + 1} has non-string answer:`, {
+            type: typeof answer,
+            value: answer
+          });
+          // Try to extract text if it's an object with a text property
+          if (answer && typeof answer === 'object' && answer.text) {
+            answer = answer.text;
+          } else {
+            answer = JSON.stringify(answer);
+          }
+        }
+        
+        return {
+          question: String(question).trim(),
+          answer: String(answer).trim()
+        };
+      });
+      
+      // Filter out any cards that still don't have both fields
+      flashcards = flashcards.filter(card => card.question && card.answer);
+      
+      if (flashcards.length === 0) {
+        throw new Error('No valid flashcards generated - all cards were missing question or answer fields');
+      }
+      
+      console.log(`✅ Gemini: Successfully generated ${flashcards.length} flashcards`);
       return flashcards;
+      
     } catch (error) {
-      console.error('Error generating flashcards:', error);
-      throw new Error('Failed to generate flashcards: ' + error.message);
+      console.error('❌ Gemini Error:', error.message);
+      throw new Error(`Gemini API Error: ${error.message}`);
     }
   }
 
   /**
-   * Process multiple chunks and generate flashcards for each
-   * @param {Array} chunks - Array of chunk objects from ContentChunker
-   * @param {Function} progressCallback - Optional callback for progress updates
-   * @returns {Array} Combined flashcards with section metadata
+   * Check if this service can handle the given model
+   * @param {string} modelName - The model identifier
+   * @returns {boolean} True if this is a Gemini model
    */
-  async processChunks(chunks, progressCallback = null) {
-    const allFlashcards = [];
-    const contentChunker = require('./contentChunker');
-    
-    console.log(`Processing ${chunks.length} chunks...`);
-    
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      
-      try {
-        // Calculate optimal flashcard count for this chunk
-        const cardCount = contentChunker.calculateFlashcardsPerChunk(chunk.text);
-        
-        console.log(`Processing chunk ${i + 1}/${chunks.length}: "${chunk.title}" (${chunk.text.length} chars, targeting ${cardCount} cards)`);
-        
-        // Generate flashcards for this chunk
-        const flashcards = await this.generateFlashcards(chunk.text, cardCount);
-        
-        // Add metadata to each flashcard
-        const enrichedFlashcards = flashcards.map(card => ({
-          ...card,
-          section: chunk.title,
-          chunkIndex: chunk.chunkIndex,
-          sourcePages: chunk.estimatedPages
-        }));
-        
-        allFlashcards.push(...enrichedFlashcards);
-        
-        console.log(`Generated ${flashcards.length} flashcards for "${chunk.title}"`);
-        
-        // Call progress callback if provided
-        if (progressCallback) {
-          progressCallback({
-            currentChunk: i + 1,
-            totalChunks: chunks.length,
-            flashcardsGenerated: allFlashcards.length,
-            currentSection: chunk.title
-          });
-        }
-        
-        // Add a small delay to avoid rate limiting (Gemini API best practice)
-        if (i < chunks.length - 1) {
-          await this.delay(1000); // 1 second delay between chunks
-        }
-        
-        // Force garbage collection if available (helps with memory management)
-        if (global.gc) {
-          global.gc();
-        }
-        
-      } catch (error) {
-        console.error(`Error processing chunk ${i + 1} ("${chunk.title}"):`, error);
-        
-        // Continue with next chunk instead of failing completely
-        console.log(`Skipping chunk ${i + 1} due to error, continuing with remaining chunks...`);
-        
-        if (progressCallback) {
-          progressCallback({
-            currentChunk: i + 1,
-            totalChunks: chunks.length,
-            flashcardsGenerated: allFlashcards.length,
-            currentSection: chunk.title,
-            error: `Failed to process: ${error.message}`
-          });
-        }
-      }
-    }
-    
-    console.log(`Total flashcards generated: ${allFlashcards.length} from ${chunks.length} chunks`);
-    
-    return allFlashcards;
+  static canHandle(modelName) {
+    return modelName && modelName.startsWith('gemini-');
   }
 
   /**
-   * Helper function to add delay
+   * Get available Gemini models
+   * @returns {Array} List of available models
    */
-  delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  convertToCSV(flashcards) {
-    // Check if flashcards have section metadata
-    const hasSections = flashcards.length > 0 && flashcards[0].section;
-    
-    const headers = hasSections ? 'Section,Question,Answer\n' : 'Question,Answer\n';
-    const rows = flashcards.map(card => {
-      const question = `"${card.question.replace(/"/g, '""')}"`;
-      const answer = `"${card.answer.replace(/"/g, '""')}"`;
-      
-      if (hasSections) {
-        const section = `"${(card.section || 'General').replace(/"/g, '""')}"`;
-        return `${section},${question},${answer}`;
-      }
-      
-      return `${question},${answer}`;
-    }).join('\n');
-    
-    return headers + rows;
+  static getAvailableModels() {
+    return [
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', free: true },
+      { id: 'gemini-2.0-flash-exp', name: 'Gemini 2.0 Flash Experimental', free: true },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', free: true },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', free: true }
+    ];
   }
 }
 
-module.exports = new GeminiService();
-
+module.exports = GeminiService;

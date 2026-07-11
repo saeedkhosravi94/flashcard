@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { FaTimes } from 'react-icons/fa';
 import './AICardGenerator.css';
 
 function AICardGenerator({ flashcardSetId, deckTitle, onCardsGenerated, onCancel, onSwitchToManual }) {
@@ -53,11 +54,11 @@ function AICardGenerator({ flashcardSetId, deckTitle, onCardsGenerated, onCancel
   };
 
   return (
-    <div className="ai-generator-overlay" onClick={onCancel}>
+    <div className="ai-generator-overlay">
       <div className="ai-generator-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>🤖 Generate More Cards with AI</h2>
-          <button className="close-button" onClick={onCancel}>✕</button>
+          <button className="close-button" onClick={onCancel}><FaTimes /></button>
         </div>
 
         <div className="ai-info">

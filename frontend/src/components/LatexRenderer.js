@@ -1,129 +1,113 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import katex from 'katex';
 
 /**
- * LatexRenderer - Renders text with LaTeX math expressions
- * Supports both inline ($...$) and block ($$...$$) LaTeX
+ * LatexRenderer - Renders text with Markdown and LaTeX math expressions
+ * Supports:
+ * - Markdown: **bold**, `code`, etc.
+ * - LaTeX: inline ($...$) and block ($$...$$) math
  */
 function LatexRenderer({ content }) {
-  const renderLatex = (text) => {
-    if (!text) return [];
+  // Preprocess content: Replace LaTeX with HTML that will be preserved by rehype-raw
+  const processedContent = useMemo(() => {
+    if (!content) return '';
 
-    const elements = [];
-    let key = 0;
+    let processed = content;
 
-    // First, handle block math ($$...$$)
-    const blockMathRegex = /\$\$(.*?)\$\$/gs;
-    let lastIndex = 0;
+    // Step 1: Protect code blocks from LaTeX processing
+    const codeBlocks = [];
+    let codeIndex = 0;
 
-    // Split by block math first
-    const parts = [];
-    let match;
-    
-    while ((match = blockMathRegex.exec(text)) !== null) {
-      // Add text before the match
-      if (match.index > lastIndex) {
-        parts.push({ type: 'text', content: text.substring(lastIndex, match.index) });
+    // Protect fenced code blocks first (```...```)
+    processed = processed.replace(/```[\s\S]*?```/g, (match) => {
+      const placeholder = `___FENCED_CODE_${codeIndex}___`;
+      codeBlocks.push(match);
+      codeIndex++;
+      return placeholder;
+    });
+
+    // Protect inline code (`...`) - but only if not part of a fenced block
+    processed = processed.replace(/`[^`\n]+`/g, (match) => {
+      if (!match.includes('___FENCED_CODE_')) {
+        const placeholder = `___INLINE_CODE_${codeIndex}___`;
+        codeBlocks.push(match);
+        codeIndex++;
+        return placeholder;
       }
-      // Add the block math
-      parts.push({ type: 'block', content: match[1] });
-      lastIndex = match.index + match[0].length;
-    }
-    
-    // Add remaining text
-    if (lastIndex < text.length) {
-      parts.push({ type: 'text', content: text.substring(lastIndex) });
-    }
+      return match;
+    });
 
-    // Now process each part for inline math
-    parts.forEach((part, partIndex) => {
-      if (part.type === 'block') {
-        // Render block math
-        try {
-          const html = katex.renderToString(part.content, {
-            displayMode: true,
-            throwOnError: false,
-            errorColor: '#cc0000',
-            strict: false
-          });
-          elements.push(
-            <div 
-              key={`block-${partIndex}`}
-              className="latex-block"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          );
-        } catch (error) {
-          console.error('LaTeX block render error:', error);
-          elements.push(
-            <div key={`block-error-${partIndex}`} className="latex-error">
-              $$Error: {part.content}$$
-            </div>
-          );
-        }
-      } else {
-        // Process inline math in text
-        const inlineMathRegex = /\$(.*?)\$/g;
-        let lastIdx = 0;
-        let inlineMatch;
-        const textContent = part.content;
-
-        while ((inlineMatch = inlineMathRegex.exec(textContent)) !== null) {
-          // Add text before the match
-          if (inlineMatch.index > lastIdx) {
-            const textBefore = textContent.substring(lastIdx, inlineMatch.index);
-            if (textBefore) {
-              elements.push(<span key={`text-${key++}`}>{textBefore}</span>);
-            }
-          }
-
-          // Render inline math
-          try {
-            const html = katex.renderToString(inlineMatch[1], {
-              displayMode: false,
-              throwOnError: false,
-              errorColor: '#cc0000',
-              strict: false
-            });
-            elements.push(
-              <span 
-                key={`inline-${key++}`}
-                className="latex-inline"
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            );
-          } catch (error) {
-            console.error('LaTeX inline render error:', error);
-            elements.push(
-              <span key={`inline-error-${key++}`} className="latex-error">
-                ${inlineMatch[1]}$
-              </span>
-            );
-          }
-
-          lastIdx = inlineMatch.index + inlineMatch[0].length;
-        }
-
-        // Add remaining text
-        if (lastIdx < textContent.length) {
-          const remainingText = textContent.substring(lastIdx);
-          if (remainingText) {
-            elements.push(<span key={`text-${key++}`}>{remainingText}</span>);
-          }
-        }
+    // Step 2: Process block math ($$...$$) and replace with HTML div
+    processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, mathContent) => {
+      try {
+        const html = katex.renderToString(mathContent.trim(), {
+          displayMode: true,
+          throwOnError: false,
+          errorColor: '#cc0000',
+          strict: false
+        });
+        return `<div class="latex-block">${html}</div>`;
+      } catch (error) {
+        console.error('LaTeX block error:', error);
+        return `<div class="latex-error">Error rendering: ${mathContent}</div>`;
       }
     });
 
-    return elements.length > 0 ? elements : [<span key="default">{text}</span>];
+    // Step 3: Process inline math ($...$)
+    processed = processed.replace(/\$([^$\n]+?)\$/g, (match, mathContent) => {
+      try {
+        const html = katex.renderToString(mathContent.trim(), {
+          displayMode: false,
+          throwOnError: false,
+          errorColor: '#cc0000',
+          strict: false
+        });
+        return `<span class="latex-inline">${html}</span>`;
+      } catch (error) {
+        console.error('LaTeX inline error:', error);
+        return `<span class="latex-error">${match}</span>`;
+      }
+    });
+
+    // Step 4: Restore code blocks
+    codeBlocks.forEach((code, index) => {
+      processed = processed.replace(`___FENCED_CODE_${index}___`, code);
+      processed = processed.replace(`___INLINE_CODE_${index}___`, code);
+    });
+
+    return processed;
+  }, [content]);
+
+  if (!content) return null;
+
+  // Custom components for react-markdown (for code styling)
+  const components = {
+    code: ({ node, inline, className, children, ...props }) => {
+      if (inline) {
+        return (
+          <code className="markdown-inline-code" {...props}>
+            {children}
+          </code>
+        );
+      }
+      return (
+        <code className="markdown-code-block" {...props}>
+          {children}
+        </code>
+      );
+    },
   };
 
   return (
     <div className="latex-content">
-      {renderLatex(content)}
+      <ReactMarkdown rehypePlugins={[rehypeRaw]} components={components}>
+        {processedContent}
+      </ReactMarkdown>
     </div>
   );
 }
 
 export default LatexRenderer;
-
